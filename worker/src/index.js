@@ -7,7 +7,7 @@ const JOBS_DIR = process.env.JOBS_DIR || '/data/jobs';
 const HOST_JOBS_DIR = process.env.HOST_JOBS_DIR || JOBS_DIR;
 const REDIS_URL = process.env.REDIS_URL || 'redis://redis:6379';
 const PARSER_IMAGE = process.env.PARSER_IMAGE || 'dht-parser:latest';
-const CONTAINER_TIMEOUT = 30_000;
+const CONTAINER_TIMEOUT = 120_000; // 2 min — OCR pages are slow
 
 const redis = new Redis(REDIS_URL);
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });

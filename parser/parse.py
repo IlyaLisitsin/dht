@@ -7,7 +7,11 @@ def extract(pdf_path, out_path):
     doc = fitz.open(pdf_path)
     pages = []
     for page in doc:
-        pages.append({"page": page.number + 1, "text": page.get_text()})
+        text = page.get_text()
+        # If no embedded text found, fall back to OCR
+        if not text.strip():
+            text = page.get_textpage_ocr(flags=0, language="eng+deu", dpi=300, full=True).extractText()
+        pages.append({"page": page.number + 1, "text": text})
     doc.close()
 
     with open(out_path, "w") as f:

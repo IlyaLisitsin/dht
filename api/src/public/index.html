@@ -86,6 +86,22 @@
       font-size: 0.8rem;
       color: #888;
     }
+
+    .copy-btn {
+      margin-bottom: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      border: 1px solid #d1d5db;
+      border-radius: 5px;
+      background: #fff;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover { background: #f3f4f6; }
+    .copy-btn.copied {
+      background: #dcfce7;
+      border-color: #86efac;
+    }
   </style>
 </head>
 <body>
@@ -101,6 +117,7 @@
     <div class="state" id="state"></div>
     <div class="error" id="error"></div>
     <div class="result" id="result">
+      <button class="copy-btn" id="copyBtn">Copy text</button>
       <pre id="output"></pre>
     </div>
   </div>
@@ -113,6 +130,17 @@
     const errorEl = document.getElementById('error');
     const resultEl = document.getElementById('result');
     const outputEl = document.getElementById('output');
+    const copyBtn = document.getElementById('copyBtn');
+
+    copyBtn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(outputEl.textContent);
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy text';
+        copyBtn.classList.remove('copied');
+      }, 2000);
+    });
 
     dropzone.addEventListener('click', () => fileInput.click());
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('over'); });
