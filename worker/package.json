@@ -1,0 +1,13 @@
+{
+  "name": "dht-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dockerode": "^4.0.2",
+    "ioredis": "^5.4.1"
+  }
+}

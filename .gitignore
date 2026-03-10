@@ -1,3 +1,10 @@
+# Jobs data
+/data/
+
+# Python
+__pycache__/
+*.pyc
+
 # Logs
 logs
 *.log

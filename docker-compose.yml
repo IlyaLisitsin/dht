@@ -1,0 +1,39 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+  api:
+    build: ./api
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JOBS_DIR=/data/jobs
+    volumes:
+      - ./data/jobs:/data/jobs
+    depends_on:
+      - redis
+
+  worker:
+    build: ./worker
+    group_add:
+      - ${DOCKER_GID:-0}
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - JOBS_DIR=/data/jobs
+      - HOST_JOBS_DIR=${PWD}/data/jobs
+      - PARSER_IMAGE=dht-parser:latest
+    volumes:
+      - ./data/jobs:/data/jobs
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - redis
+
+  # Build-only: the worker spawns this image on-demand
+  parser:
+    build: ./parser
+    image: dht-parser:latest
+    profiles:
+      - build
