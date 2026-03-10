@@ -70,12 +70,41 @@ app.get('/jobs/:id', async (req, res) => {
   const response = { jobId, status: data.status };
 
   if (data.status === 'done') {
-    response.result = JSON.parse(data.result);
+    response.pageCount = Number(data.page_count);
   } else if (data.status === 'failed') {
     response.error = data.error;
   }
 
   res.json(response);
+});
+
+const PAGE_SIZE = 20;
+
+app.get('/jobs/:id/pages', async (req, res) => {
+  const jobId = req.params.id;
+  const data = await redis.hgetall(`job:${jobId}`);
+
+  if (!data || data.status !== 'done') {
+    return res.status(404).json({ error: 'Job not found or not done' });
+  }
+
+  const from = Math.max(1, Number(req.query.from) || 1);
+  const to = Math.min(Number(data.page_count), Number(req.query.to) || from + PAGE_SIZE - 1);
+
+  try {
+    const outputPath = path.join(JOBS_DIR, jobId, 'output.json');
+    const result = JSON.parse(await fs.readFile(outputPath, 'utf-8'));
+    const pages = result.pages.slice(from - 1, to);
+
+    res.json({
+      pages,
+      pageCount: result.page_count,
+      from,
+      to: from + pages.length - 1,
+    });
+  } catch {
+    res.status(404).json({ error: 'Result file not found' });
+  }
 });
 
 app.listen(PORT, () => {

@@ -55,13 +55,16 @@ async function processJob(jobId) {
       throw new Error(`Parser exited with code ${StatusCode}: ${logs.toString()}`);
     }
 
-    const result = await fs.readFile(outputPath, 'utf-8');
-    // Validate JSON before storing
-    JSON.parse(result);
-    await redis.hset(`job:${jobId}`, 'status', 'done', 'result', result);
+    const result = JSON.parse(await fs.readFile(outputPath, 'utf-8'));
+    // Store only metadata in Redis — result stays on disk
+    await redis.hset(`job:${jobId}`,
+      'status', 'done',
+      'page_count', String(result.page_count),
+    );
+    // Delete input PDF to free space, keep output.json for serving
+    await fs.unlink(path.join(jobDir, 'input.pdf')).catch(() => {});
   } finally {
     await container.remove({ force: true }).catch(() => {});
-    await fs.rm(jobDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 

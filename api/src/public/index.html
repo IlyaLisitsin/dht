@@ -87,8 +87,19 @@
       color: #888;
     }
 
-    .copy-btn {
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
       margin-bottom: 0.5rem;
+    }
+
+    .page-info {
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    .btn {
       padding: 0.4rem 0.8rem;
       font-size: 0.8rem;
       border: 1px solid #d1d5db;
@@ -97,8 +108,9 @@
       cursor: pointer;
       transition: background 0.15s;
     }
-    .copy-btn:hover { background: #f3f4f6; }
-    .copy-btn.copied {
+    .btn:hover { background: #f3f4f6; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .btn.copied {
       background: #dcfce7;
       border-color: #86efac;
     }
@@ -117,7 +129,11 @@
     <div class="state" id="state"></div>
     <div class="error" id="error"></div>
     <div class="result" id="result">
-      <button class="copy-btn" id="copyBtn">Copy text</button>
+      <div class="toolbar">
+        <button class="btn" id="copyBtn">Copy all</button>
+        <button class="btn" id="loadMoreBtn" style="display:none">Load more</button>
+        <span class="page-info" id="pageInfo"></span>
+      </div>
       <pre id="output"></pre>
     </div>
   </div>
@@ -131,16 +147,25 @@
     const resultEl = document.getElementById('result');
     const outputEl = document.getElementById('output');
     const copyBtn = document.getElementById('copyBtn');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const pageInfo = document.getElementById('pageInfo');
+
+    let currentJobId = null;
+    let loadedUpTo = 0;
+    let totalPages = 0;
+    const PAGE_SIZE = 20;
 
     copyBtn.addEventListener('click', async () => {
       await navigator.clipboard.writeText(outputEl.textContent);
       copyBtn.textContent = 'Copied!';
       copyBtn.classList.add('copied');
       setTimeout(() => {
-        copyBtn.textContent = 'Copy text';
+        copyBtn.textContent = 'Copy all';
         copyBtn.classList.remove('copied');
       }, 2000);
     });
+
+    loadMoreBtn.addEventListener('click', () => loadPages());
 
     dropzone.addEventListener('click', () => fileInput.click());
     dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('over'); });
@@ -161,6 +186,8 @@
       errorEl.textContent = '';
       stateEl.textContent = 'Uploading...';
       stateEl.className = 'state';
+      loadedUpTo = 0;
+      totalPages = 0;
 
       const form = new FormData();
       form.append('file', file);
@@ -176,6 +203,7 @@
           return;
         }
 
+        currentJobId = data.jobId;
         poll(data.jobId);
       } catch (err) {
         stateEl.textContent = 'Error';
@@ -198,15 +226,11 @@
 
           if (data.status === 'done') {
             clearInterval(interval);
+            totalPages = data.pageCount;
             resultEl.classList.add('visible');
             outputEl.innerHTML = '';
-            for (const page of data.result.pages) {
-              const div = document.createElement('div');
-              div.className = 'page-divider';
-              div.textContent = `Page ${page.page}`;
-              outputEl.appendChild(div);
-              outputEl.appendChild(document.createTextNode(page.text));
-            }
+            loadedUpTo = 0;
+            await loadPages();
           } else if (data.status === 'failed') {
             clearInterval(interval);
             errorEl.textContent = data.error;
@@ -215,6 +239,36 @@
           // keep polling
         }
       }, 1000);
+    }
+
+    async function loadPages() {
+      const from = loadedUpTo + 1;
+      const to = Math.min(loadedUpTo + PAGE_SIZE, totalPages);
+
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.textContent = 'Loading...';
+
+      const res = await fetch(`/jobs/${currentJobId}/pages?from=${from}&to=${to}`);
+      const data = await res.json();
+
+      for (const page of data.pages) {
+        const div = document.createElement('div');
+        div.className = 'page-divider';
+        div.textContent = `Page ${page.page}`;
+        outputEl.appendChild(div);
+        outputEl.appendChild(document.createTextNode(page.text));
+      }
+
+      loadedUpTo = to;
+      pageInfo.textContent = `${loadedUpTo} / ${totalPages} pages`;
+
+      if (loadedUpTo < totalPages) {
+        loadMoreBtn.style.display = '';
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.textContent = `Load next ${Math.min(PAGE_SIZE, totalPages - loadedUpTo)} pages`;
+      } else {
+        loadMoreBtn.style.display = 'none';
+      }
     }
   </script>
 </body>
